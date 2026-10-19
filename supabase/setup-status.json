@@ -3,6 +3,6 @@
   "stage": "auth-update",
   "project_ref": "yncorbvtorjopvhxtsbc",
   "schema_verified": true,
-  "message": "Management API returned HTTP 400",
+  "message": "Management API returned HTTP 400: Email template modification is not available for free tier projects using the default email provider. Please upgrade your plan or configure a custom SMTP provider.",
   "http_status": 400
 }
