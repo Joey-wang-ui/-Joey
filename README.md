@@ -1,27 +1,23 @@
 # 清单 · 近期待办
 
-一个适合手机浏览器的个人待办网页。打开后即可添加、编辑、完成和清空任务，支持快捷截止日期。
+网站：https://joey-wang-ui.github.io/-Joey/
 
-## 发布
+适合电脑、手机浏览器的个人待办网页，支持快捷截止日期、编辑、完成和批量清空。
 
-公开仓库的 Settings → Pages → Deploy from a branch，选择 main 分支和 / (root)，保存后等待 GitHub 给出访问地址。
+## 云同步已配置
+
+点击右上角「☁ 云同步」，输入注册 Supabase 时使用的邮箱，点击「发送登录邮件」，再打开邮件里的登录链接。同一邮箱可在电脑和手机共享清单。项目公开配置已内置在网页中。
+
+当前采用免费默认邮件链接登录。默认测试发信服务限制收件人和发送频率，请先用创建项目的账号邮箱测试。数字验证码需要先在 Supabase 配置自定义 SMTP，再重新运行配置流程。完整说明见 [CLOUD-SYNC.md](CLOUD-SYNC.md)。
 
 ## 数据保存
 
-默认任务保存在当前浏览器 localStorage 中。可选的「☁ 云同步」使用你自己的 Supabase 项目和邮箱验证码登录，电脑手机登录同一邮箱即可共享清单；配置步骤见 [CLOUD-SYNC.md](CLOUD-SYNC.md)。
+未登录时使用本机浏览器存储。登录后可显式导入本机待办，本机副本保留。云端按账号隔离；在线时每 15 秒自动刷新。断网保存会报错并保留输入。清除浏览器数据会删除本机任务；临时预览模式刷新后会丢失任务。
 
-登录后可显式导入本机待办，保留本机副本。云端按账号隔离，在线时每 15 秒自动刷新；断网保存会报错并保留输入。清除浏览器数据会删除本机任务；受限预览器的临时模式刷新后会丢失任务。
+## 项目维护
 
-网站：https://joey-wang-ui.github.io/-Joey/
+Pages 使用 main 分支根目录。临时 Supabase 管理令牌保存在仓库 Secret `SUPABASE_ACCESS_TOKEN`，不写入网页或日志。工作流 Check Supabase access 只读验证管理授权；Configure todo cloud 创建或复用专用 Free 项目，配置表和邮件登录。设置与验收后可撤销临时令牌；日常同步使用用户登录会话。
 
-## 字体
+## 开源许可
 
-包含站酷快乐体，遵循 SIL Open Font License 1.1；完整许可见 FONT-LICENSE.txt，亦嵌入网页内。
-
-云同步使用随页面打包的官方 Supabase JS SDK 2.118.0，许可见 SDK-LICENSES.txt，亦嵌入网页内。网页不加载外部 CDN 脚本。
-
-## 管理授权配置
-
-如需由自动流程协助配置 Supabase，在 [新增仓库密钥](https://github.com/Joey-wang-ui/-Joey/settings/secrets/actions/new) 页面，名称填写 `SUPABASE_ACCESS_TOKEN`，Secret 填写 Supabase 管理令牌，再点击 Add secret。密钥不可放入网页或提交进仓库。
-
-已准备只读授权检查工作流 Check Supabase access。保存密钥后可在 Actions 页面手动运行，或由维护者触发。检查仅验证管理 API 并显示组织/项目数量，不输出令牌和资源名称。授权检查通过不代表云同步配置已完成，建表和邮箱配置仍需后续设置。临时管理令牌在配置结束后应撤销。
+站酷快乐体遵循 SIL Open Font License 1.1，见 FONT-LICENSE.txt；官方 Supabase JS SDK 的许可见 SDK-LICENSES.txt。许可证也已嵌入单文件网页，页面不从 CDN 加载脚本。
