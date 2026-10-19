@@ -1,0 +1,8 @@
+{
+  "status": "failed",
+  "stage": "auth-update",
+  "project_ref": "yncorbvtorjopvhxtsbc",
+  "schema_verified": true,
+  "message": "Management API returned HTTP 400",
+  "http_status": 400
+}
