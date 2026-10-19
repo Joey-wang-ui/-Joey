@@ -57,8 +57,23 @@ class Management:
                 raw = response.read()
                 return json.loads(raw) if raw else None
         except HTTPError as error:
-            # Never print API bodies: they can include account data or credentials.
-            raise SetupError(stage, f"Management API returned HTTP {error.code}", error.code) from None
+            # Inspect only a validation message from this non-secret auth payload.
+            # Other API bodies (including key/DB responses) are never published.
+            detail = ""
+            if stage == "auth-update" and error.code == 400:
+                try:
+                    value = json.load(error).get("message", "")
+                    if isinstance(value, list):
+                        value = "; ".join(item for item in value if isinstance(item, str))
+                    if isinstance(value, str):
+                        value = value.replace(self.token, "[redacted]")
+                        value = re.sub(r"(?:sbp_|sb_secret_|sb_publishable_)[A-Za-z0-9_-]+", "[redacted]", value)
+                        value = re.sub(r"eyJ[A-Za-z0-9_.-]+", "[redacted]", value)
+                        value = re.sub(r"[\w.+-]+@[\w.-]+", "[email]", value)
+                        detail = ": " + value[:500]
+                except (ValueError, AttributeError, OSError):
+                    pass
+            raise SetupError(stage, f"Management API returned HTTP {error.code}{detail}", error.code) from None
         except (URLError, TimeoutError, OSError):
             raise SetupError(stage, "Management API connection failed") from None
         except (ValueError, UnicodeError):
