@@ -2012,7 +2012,14 @@ window.TodoCloudConfig = {"url": "https://yncorbvtorjopvhxtsbc.supabase.co", "ke
       if (!$("#cloud-email").reportValidity()) return;
       if (Date.now() - lastSent < 60000) throw new Error("登录邮件刚刚发出，请等一分钟再重发，并检查垃圾邮件。");
       const email = $("#cloud-email").value.trim();
-      const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      const options = { shouldCreateUser: true };
+      if (["https:", "http:"].includes(root.location.protocol)) {
+        // Cross-origin Referer headers omit paths. Supabase's default can then
+        // return to the GitHub Pages domain root instead of this repository.
+        // Never carry query parameters or a previous login fragment forward.
+        options.emailRedirectTo = root.location.origin + root.location.pathname;
+      }
+      const { error } = await client.auth.signInWithOtp({ email, options });
       if (error) throw new Error(error.status === 429 ? "发送过于频繁，请稍后再试。" : "登录邮件未能发送，请检查网络、邮箱和 Supabase 邮件配置。");
       sentEmail = email;
       lastSent = Date.now();
