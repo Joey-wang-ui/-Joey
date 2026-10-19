@@ -1808,7 +1808,7 @@ window.TodoCloudConfig = { "url": "", "key": "" };
     }
     if (!publicKey)
       throw new Error("这里只能填写 publishable key 或旧版 anon public key；不要填写 secret / service_role 密钥。");
-    return { url, key };
+    return { url, key, emailMode: config.emailMode === "link" ? "link" : "otp" };
   }
 
   function cloudError(error) {
@@ -1920,6 +1920,11 @@ window.TodoCloudConfig = { "url": "", "key": "" };
       $("#cloud-account-section").hidden = !user;
       $("#cloud-use-local").hidden = !wanted || !!user;
       $("#cloud-account-email").textContent = user?.email || "";
+      const mailLink = config?.emailMode === "link";
+      $("#cloud-send-code").textContent = mailLink ? "发送登录邮件" : "发送登录验证码";
+      $("#cloud-login-section > .cloud-help").textContent = mailLink
+        ? "打开邮件，点击登录链接即可进入清单。首次登录会创建账号。测试邮件服务有发送频率与收件人限制。"
+        : "首次登录会创建账号。若邮件中只有链接，请按教程调整 Supabase 邮件模板。";
       $("#cloud-open").textContent = user ? "☁ 已连接" : wanted ? "☁ 请登录" : "☁ 云同步";
       $("#cloud-open").classList.toggle("connected", !!user);
       for (const button of $("#cloud-dialog").querySelectorAll("button"))
@@ -1960,7 +1965,7 @@ window.TodoCloudConfig = { "url": "", "key": "" };
     async function connect(nextConfig) {
       config = root.TodoCloud.validateConfig(nextConfig);
       client = root.TodoSupabase.createClient(config.url, config.key, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
       });
       store = new root.TodoCloud.CloudStore(client);
       subscription = client.auth.onAuthStateChange((_event, session) => {
@@ -2006,15 +2011,18 @@ window.TodoCloudConfig = { "url": "", "key": "" };
     });
     $("#cloud-send-code").addEventListener("click", () => run(async () => {
       if (!$("#cloud-email").reportValidity()) return;
-      if (Date.now() - lastSent < 60000) throw new Error("验证码刚刚发出，请等一分钟再重发，并检查垃圾邮件。");
+      if (Date.now() - lastSent < 60000) throw new Error("登录邮件刚刚发出，请等一分钟再重发，并检查垃圾邮件。");
       const email = $("#cloud-email").value.trim();
       const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-      if (error) throw new Error(error.status === 429 ? "发送过于频繁，请稍后再试。" : "验证码未能发送，请检查网络、邮箱和 Supabase 邮件配置。");
+      if (error) throw new Error(error.status === 429 ? "发送过于频繁，请稍后再试。" : "登录邮件未能发送，请检查网络、邮箱和 Supabase 邮件配置。");
       sentEmail = email;
       lastSent = Date.now();
-      $("#cloud-code-section").hidden = false;
-      $("#cloud-status").textContent = "验证码已发送，请查看邮箱（含垃圾邮件）。";
-      $("#cloud-code").focus();
+      const mailLink = config?.emailMode === "link";
+      $("#cloud-code-section").hidden = mailLink;
+      $("#cloud-status").textContent = mailLink
+        ? "登录邮件已发送，请查看邮箱并点击邮件中的登录链接（也请检查垃圾邮件）。"
+        : "验证码已发送，请查看邮箱（含垃圾邮件）。";
+      if (!mailLink) $("#cloud-code").focus();
     }));
     $("#cloud-verify-code").addEventListener("click", () => run(async () => {
       const token = $("#cloud-code").value.trim();

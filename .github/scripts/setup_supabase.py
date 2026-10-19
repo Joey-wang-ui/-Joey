@@ -137,17 +137,21 @@ def wait_ready(api, ref, sleep=time.sleep):
     raise SetupError("project-status", "Project initialization is still pending; rerun setup later")
 
 
-def auth_configuration():
+def auth_configuration(custom_smtp=True):
     template = '<h2>登录你的清单</h2><p>本次登录验证码：<strong>{{ .Token }}</strong></p><p>请回到清单网页输入验证码，10 分钟内有效。</p>'
-    return {
+    config = {
         "site_url": SITE, "uri_allow_list": SITE,
         "external_email_enabled": True, "disable_signup": False,
         "mailer_autoconfirm": False, "mailer_otp_length": 6, "mailer_otp_exp": 600,
-        "mailer_subjects_magic_link": "清单登录验证码",
-        "mailer_subjects_confirmation": "清单注册验证码",
-        "mailer_templates_magic_link_content": template,
-        "mailer_templates_confirmation_content": template,
     }
+    if custom_smtp:
+        config.update({
+            "mailer_subjects_magic_link": "清单登录验证码",
+            "mailer_subjects_confirmation": "清单注册验证码",
+            "mailer_templates_magic_link_content": template,
+            "mailer_templates_confirmation_content": template,
+        })
+    return config
 
 
 VERIFY_SQL = """select
@@ -172,8 +176,10 @@ def write_config(root, config):
     ref = config["url"].split("//", 1)[1].split(".")[0]
     key = config["key"]
     record = {"name": "anon", "type": "publishable" if key.startswith("sb_publishable_") else "legacy", "api_key": key}
-    if public_config(ref, [record]) != config:
+    if public_config(ref, [record]) != {"url": config["url"], "key": key}:
         raise SetupError("public-config", "Public project URL validation failed")
+    if set(config) - {"url", "key", "emailMode"} or config.get("emailMode", "otp") not in {"otp", "link"}:
+        raise SetupError("public-config", "Public project metadata validation failed")
     page = (root / "index.html").read_text(encoding="utf-8")
     replacement = "window.TodoCloudConfig = " + json.dumps(config, ensure_ascii=True) + ";"
     page, count = re.subn(r"window\.TodoCloudConfig\s*=\s*\{[^;]*\}\s*;", lambda match: replacement, page, count=1)
@@ -232,17 +238,22 @@ def configure(api, root, state, sleep=time.sleep, public_check=verify_public_api
     state["schema_verified"] = True
     print("Todo table and account isolation verified.", flush=True)
     state["stage"] = "email-auth"
-    expected = auth_configuration()
+    current = api.request("GET", f"/projects/{ref}/config/auth", stage="auth-current")
+    expected = auth_configuration(custom_smtp=bool(current.get("smtp_host")))
     api.request("PATCH", f"/projects/{ref}/config/auth", expected, "auth-update")
     actual = api.request("GET", f"/projects/{ref}/config/auth", stage="auth-verify")
     if any(actual.get(key) != value for key, value in expected.items()):
         raise SetupError("auth-verify", "Email authentication configuration did not match")
     state["email_configuration_verified"] = True
     state["custom_smtp_configured"] = bool(actual.get("smtp_host"))
+    content = actual.get("mailer_templates_magic_link_content") or ""
+    email_mode = "otp" if re.search(r"{{\s*\.Token\s*}}", content) else "link"
+    state["email_mode"] = email_mode
     print("Email code configuration verified.", flush=True)
     state["stage"] = "public-config"
     keys = api.request("GET", f"/projects/{ref}/api-keys?reveal=true", stage="public-key-read")
     config = public_config(ref, keys)
+    config["emailMode"] = email_mode
     public_check(config)
     state["public_api_verified"] = True
     write_config(root, config)
