@@ -1,0 +1,40 @@
+name: Configure todo cloud
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/setup-cloud.yml
+      - .github/scripts/setup_supabase.py
+      - supabase/schema.sql
+
+permissions:
+  contents: write
+
+concurrency:
+  group: todo-cloud-setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Read repository files
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure dedicated free project, database and email codes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python3 .github/scripts/setup_supabase.py
+      - name: Save public setup status and browser configuration
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html supabase/setup-status.json
+          if test -f supabase/public-config.json; then git add supabase/public-config.json; fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'Save todo cloud setup status and public configuration'
+            git push origin HEAD:main
+          fi
