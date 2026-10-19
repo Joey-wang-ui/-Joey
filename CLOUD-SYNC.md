@@ -1,6 +1,6 @@
 # 电脑、手机同步清单
 
-网站：https://zhehao-wang-ui.github.io/-Joey/
+网站：https://joey-wang-ui.github.io/-Joey/
 
 未登录时，待办仍只保存在当前浏览器。云同步需要你自己的免费 Supabase 项目，以下操作只做一次。
 
